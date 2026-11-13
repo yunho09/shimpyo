@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>쉼표 차량 화면 시안</title>
+<style>
+  /* 쉼표 v0.3 차량 화면 시안 (Pleos Connect-S 17", 2560×1440dp, 앱 창 세로 840×1184dp)
+     Pleos UI 가이드(Asta Sans, 그레이스케일, 글자 크기) + unslop by @heydamir 기준 */
+  @font-face { font-family: "Asta Sans"; src: url("../app/src/main/res/font/asta_sans_regular.ttf"); font-weight: 400; }
+  @font-face { font-family: "Asta Sans"; src: url("../app/src/main/res/font/asta_sans_medium.ttf"); font-weight: 500; }
+  @font-face { font-family: "Asta Sans"; src: url("../app/src/main/res/font/asta_sans_bold.ttf"); font-weight: 600 700; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #000; font-family: "Asta Sans", sans-serif; font-variant-numeric: tabular-nums; }
+
+  .dark  { --page:#1D1E21; --deep:#131417; --card:#2A2B30; --raised:#313236; --line:rgba(255,255,255,.08); --t1:#F7F8FA; --t2:#C7C9CE; --t3:#A4A8AE;
+           --pri:#E0E1E6; --onpri:#131417; --sec:rgba(255,255,255,.10); --amber:#F0A43A; --amberText:#F0A43A; --track:rgba(255,255,255,.10); --sys:#131417; --sysT:#C7C9CE; }
+  .light { --page:#F7F8FA; --deep:#EDEEF2; --card:#FFFFFF; --raised:#FFFFFF; --line:rgba(19,20,23,.08); --t1:#131417; --t2:#44464E; --t3:#686A72;
+           --pri:#313236; --onpri:#FFFFFF; --sec:rgba(19,20,23,.06); --amber:#E8962A; --amberText:#9A5B00; --track:rgba(19,20,23,.10); --sys:#E0E1E6; --sysT:#44464E; }
+  .nap   { --page:#0B0C0D; --card:#141517; --raised:#1A1B1E; --line:rgba(255,255,255,.06); --t1:#C7C9CE; --t2:#A4A8AE; --t3:#8B8E95;
+           --sec:rgba(255,255,255,.06); --track:rgba(255,255,255,.08); }
+
+  /* 차량 전체 화면 */
+  .screen { width: 2560px; height: 1440px; background: var(--sys); position: relative; overflow: hidden; margin-bottom: 40px; }
+  .status { position: absolute; left: 0; right: 0; top: 0; height: 80px; display: flex; align-items: center; padding: 0 40px; gap: 32px; color: var(--sysT); font-size: 26px; }
+  .status .pill { height: 48px; padding: 0 20px; border-radius: 24px; background: var(--sec); display: flex; align-items: center; }
+  .status .r { margin-left: auto; display: flex; gap: 28px; align-items: center; }
+  .drive { position: absolute; left: 24px; top: 96px; width: 812px; height: 1160px; border-radius: 24px; background: var(--deep); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--sysT); }
+  .drive .spd { font-size: 200px; font-weight: 600; color: var(--t1); line-height: 1; }
+  .drive .u { font-size: 32px; margin-top: 8px; }
+  .drive .prnd { display: flex; gap: 40px; margin-top: 64px; font-size: 40px; font-weight: 600; }
+  .drive .prnd .on { color: var(--t1); }
+  .drive .prnd span { color: var(--t3); }
+  .gnb { position: absolute; left: 0; right: 0; bottom: 0; height: 168px; display: flex; align-items: center; justify-content: center; gap: 32px; color: var(--sysT); font-size: 40px; font-weight: 500; }
+  .gnb .app { width: 88px; height: 88px; border-radius: 22px; background: var(--sec); }
+  .gnb .t { width: 200px; text-align: center; }
+  .w1 { position: absolute; left: 856px; top: 96px; width: 840px; height: 1184px; border-radius: 24px; overflow: hidden; }
+  .w2 { position: absolute; left: 1716px; top: 96px; width: 820px; height: 1184px; border-radius: 24px; overflow: hidden; background: var(--deep); }
+  .wl { position: absolute; left: 856px; top: 96px; width: 1680px; height: 1184px; border-radius: 24px; overflow: hidden; }
+  .map { width: 100%; height: 100%; position: relative; }
+  .map svg { position: absolute; inset: 0; }
+  .map .tag { position: absolute; left: 48px; top: 48px; font-size: 28px; color: var(--sysT); }
+
+  /* 쉼표 앱 창 */
+  .app { width: 100%; height: 100%; background: var(--page); color: var(--t1); display: flex; flex-direction: column; }
+  .hdr { height: 104px; padding: 0 40px; display: flex; align-items: center; gap: 12px; flex: none; }
+  .hdr .name { font-size: 32px; font-weight: 700; letter-spacing: -0.01em; }
+  .hdr .meta { margin-left: auto; display: flex; gap: 24px; font-size: 24px; color: var(--t2); }
+  .hdr .meta b { color: var(--t1); font-weight: 500; margin-left: 8px; }
+  .comma { width: 32px; height: 32px; }
+  .comma path { fill: var(--amber); }
+  .tabs { margin: 0 40px; display: flex; padding: 6px; background: var(--sec); border-radius: 20px; flex: none; }
+  .tabs div { flex: 1; height: 72px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--t2); }
+  .tabs .on { background: var(--raised); color: var(--t1); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .main { flex: 1; padding: 40px; display: flex; flex-direction: column; min-height: 0; }
+  .foot { padding: 0 40px 40px; display: flex; flex-direction: column; gap: 16px; flex: none; }
+  .btn { height: 104px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; }
+  .btn.p { background: var(--pri); color: var(--onpri); }
+  .btn.s { background: var(--sec); color: var(--t1); font-weight: 500; }
+  .row2 { display: flex; gap: 16px; } .row2 .btn { flex: 1; }
+  .eyebrow { font-size: 28px; color: var(--t2); }
+  .h { font-size: 48px; line-height: 64px; font-weight: 700; letter-spacing: -0.01em; margin-top: 12px; }
+  .say { display: flex; align-items: center; gap: 12px; font-size: 26px; color: var(--t2); height: 48px; }
+  .dot { width: 12px; height: 12px; border-radius: 6px; background: var(--amber); }
+  .ic { width: 36px; height: 36px; fill: none; stroke: var(--t3); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .ic.t2 { stroke: var(--t2); }
+
+  /* 게이지 */
+  .gauge { position: relative; width: 600px; height: 600px; margin: 0 auto; }
+  .gauge svg { position: absolute; inset: 0; }
+  .gauge .c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .gauge .lab { font-size: 28px; color: var(--t2); }
+  .gauge .fig { font-size: 120px; line-height: 1; font-weight: 600; margin-top: 12px; letter-spacing: -0.03em; }
+  .gauge .fig small { font-size: 44px; font-weight: 500; letter-spacing: 0; margin: 0 6px 0 2px; color: var(--t2); }
+  .gauge .sub { font-size: 28px; color: var(--t2); margin-top: 20px; }
+
+  /* 세로 경로 띠 */
+  .route { display: flex; gap: 32px; margin-top: 48px; background: var(--card); border-radius: 28px; padding: 40px; }
+  .route .strip { position: relative; width: 40px; }
+  .route .strip .ln { position: absolute; left: 18px; top: 40px; bottom: 16px; width: 4px; border-radius: 2px; background: var(--t2); }
+  .route .strip .me { position: absolute; left: 6px; bottom: 0; width: 28px; height: 28px; border-radius: 14px; background: var(--t1); box-shadow: 0 0 0 6px var(--card); }
+  .route .strip svg { position: absolute; left: 0; top: -4px; width: 40px; height: 40px; }
+  .route .info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; }
+  .route .k { font-size: 26px; color: var(--t3); }
+  .route .v { font-size: 36px; font-weight: 700; margin-top: 4px; }
+  .route .v2 { font-size: 30px; font-weight: 500; color: var(--t2); margin-top: 4px; }
+
+  /* 쪽잠 길이 타일 */
+  .tiles { display: flex; gap: 16px; margin-top: 40px; }
+  .tile { flex: 1; height: 144px; border-radius: 24px; background: var(--sec); display: flex; align-items: baseline; justify-content: center; padding-top: 36px; font-size: 64px; font-weight: 600; color: var(--t2); }
+  .tile small { font-size: 28px; font-weight: 500; margin-left: 4px; }
+  .tile.on { background: var(--raised); color: var(--t1); box-shadow: inset 0 0 0 3px var(--t1); }
+  .list { margin-top: 40px; background: var(--card); border-radius: 28px; padding: 8px 32px; }
+  .list .hd { font-size: 26px; color: var(--t3); padding: 24px 0 8px; }
+  .li { height: 88px; display: flex; align-items: center; gap: 20px; border-top: 1px solid var(--line); font-size: 30px; }
+  .li:first-of-type { border-top: 0; }
+  .li .v { margin-left: auto; color: var(--t2); font-size: 28px; }
+
+  /* 쪽잠 상태 아이콘 줄 */
+  .chips { display: flex; justify-content: space-between; margin-top: 56px; padding: 0 16px; }
+  .chip { display: flex; flex-direction: column; align-items: center; gap: 12px; font-size: 24px; color: var(--t2); width: 160px; }
+  .chip .ic { width: 40px; height: 40px; stroke: var(--t2); }
+  .hint { text-align: center; font-size: 24px; color: var(--t3); margin-top: 32px; }
+
+  .stats { display: flex; flex-direction: column; gap: 16px; }
+  .stat { background: var(--card); border-radius: 28px; padding: 32px 36px; display: flex; align-items: center; }
+  .stat .k { font-size: 28px; color: var(--t2); }
+  .stat .n { margin-left: auto; font-size: 44px; font-weight: 700; }
+  .rec { height: 88px; display: flex; align-items: center; border-top: 1px solid var(--line); font-size: 28px; }
+  .rec .w { width: 220px; color: var(--t3); font-size: 26px; } .rec .l { margin-left: auto; color: var(--t2); }
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <path id="cm" d="M12 3a6 6 0 0 1 6 6c0 5.2-3.2 9.7-8.3 12.2l-1-1.8c2.6-1.5 4.3-3.6 4.9-6.1A6 6 0 1 1 12 3z"/>
+  <g id="i-lock"><path d="M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></g>
+  <g id="i-wind"><path d="M12.8 19.6A2 2 0 1 0 14 16H2"/><path d="M17.5 8a2.5 2.5 0 1 1 2 4H2"/><path d="M9.8 4.4A2 2 0 1 1 11 8H2"/></g>
+  <g id="i-moon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></g>
+  <g id="i-therm"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></g>
+  <g id="i-check"><path d="M20 6 9 17l-5-5"/></g>
+  <g id="i-mic"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></g>
+  <g id="i-vol"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/></g>
+</defs></svg>
+
+<!-- 차량 화면 틀 -->
+<template id="frame">
+  <div class="screen">
+    <div class="status"><span class="pill">Gleo</span><span>검색</span><div class="r"><span>LTE</span><span class="clk">14:32</span></div></div>
+    <div class="drive"><div class="spd">92</div><div class="u">km/h</div><div class="prnd"><span>P</span><span>R</span><span>N</span><span class="on">D</span></div></div>
+    <div class="slot"></div>
+    <div class="gnb"><div class="t">22.0</div><div class="app"></div><div class="app"></div><div class="app"></div><div class="app"></div><div class="app"></div><div class="app"></div><div class="t">22.0</div></div>
+  </div>
+</template>
+
+<template id="mapwin">
+  <div class="w2"><div class="map">
+    <svg viewBox="0 0 820 1184"><path d="M410 1184 C 420 900 380 760 470 600 S 520 300 430 0" fill="none" stroke="var(--track)" stroke-width="56" stroke-linecap="round"/>
+      <path d="M410 1184 C 420 900 380 760 470 600 S 520 300 430 0" fill="none" stroke="var(--t3)" stroke-width="10" stroke-linecap="round" opacity=".7"/></svg>
+    <div class="tag">내비게이션</div></div></div>
+</template>
+
+<!-- 1. 주행 중 (밤) -->
+<div class="dark" data-frame data-id="car-driving" data-map>
+  <div class="w1"><div class="app">
+    <div class="hdr"><svg class="comma" viewBox="0 0 24 24"><use href="#cm" fill="var(--amber)"/></svg><span class="name">쉼표</span><div class="meta"><span>실내<b>23.5℃</b></span></div></div>
+    <div class="main" style="justify-content:center">
+      <div class="gauge">
+        <svg viewBox="0 0 600 600"><circle cx="300" cy="300" r="276" fill="none" stroke="var(--track)" stroke-width="16"/>
+          <circle cx="300" cy="300" r="276" fill="none" stroke="var(--t1)" stroke-width="16" stroke-linecap="round" stroke-dasharray="1734" stroke-dashoffset="694" transform="rotate(-90 300 300)"/>
+          <g transform="translate(276 6) scale(2)"><use href="#cm" fill="var(--amber)"/></g></svg>
+        <div class="c"><div class="lab">마지막 휴식 후</div><div class="fig">1<small>시간</small>12<small>분</small></div><div class="sub">48분 뒤 쉴 곳을 알려 드려요</div></div>
+      </div>
+    </div>
+    <div class="foot"><div class="btn s">지금 쉴 곳 찾기</div>
+      <div class="say"><svg class="ic" viewBox="0 0 24 24" style="width:28px;height:28px"><use href="#i-vol"/></svg>운전 중에는 음성으로 안내해요</div></div>
+  </div></div>
+</div>
+
+<!-- 2. 휴게소 제안 (밤) -->
+<div class="dark" data-frame data-id="car-suggest" data-map>
+  <div class="w1"><div class="app">
+    <div class="hdr"><svg class="comma" viewBox="0 0 24 24"><use href="#cm" fill="var(--amber)"/></svg><span class="name">쉼표</span><div class="meta"><span>실내<b>23.5℃</b></span></div></div>
+    <div class="main">
+      <div class="eyebrow">2시간 운전했어요</div>
+      <div class="h">안성휴게소에서<br>20분 쉬어 갈까요</div>
+      <div class="route">
+        <div class="strip"><svg viewBox="0 0 24 24"><use href="#cm" fill="var(--amber)"/></svg><div class="ln"></div><div class="me"></div></div>
+        <div class="info">
+          <div><div class="k">쉴 곳</div><div class="v">안성휴게소</div><div class="v2">경부고속도로 · 6km 앞</div></div>
+          <div><div class="k">지금</div><div class="v2" style="color:var(--t1)">92km/h로 가는 중</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      <div class="say"><span class="dot"></span><svg class="ic t2" viewBox="0 0 24 24" style="width:28px;height:28px"><use href="#i-mic"/></svg>“응” 또는 “괜찮아”라고 말해도 돼요</div>
+      <div class="btn p">쉬어 갈게요</div><div class="btn s">괜찮아요</div>
+    </div>
+  </div></div>
+</div>
+
+<!-- 3. 정차: 쪽잠 할까요 (밤) -->
+<div class="dark" data-frame data-id="car-parked" data-map data-park>
+  <div class="w1"><div class="app">
+    <div class="hdr"><svg class="comma" viewBox="0 0 24 24"><use href="#cm" fill="var(--amber)"/></svg><span class="name">쉼표</span><div class="meta"><span>실내<b>23.5℃</b></span></div></div>
+    <div class="tabs"><div class="on">쪽잠</div><div>기록</div><div>점검</div></div>
+    <div class="main">
+      <div class="eyebrow">안성휴게소 · 2시간 운전</div>
+      <div class="h">여기서 쪽잠 할까요</div>
+      <div class="tiles"><div class="tile">10<small>분</small></div><div class="tile on">20<small>분</small></div><div class="tile">30<small>분</small></div></div>
+      <div class="list"><div class="hd">잠들기 전에 맞춰 드려요</div>
+        <div class="li"><svg class="ic" viewBox="0 0 24 24"><use href="#i-lock"/></svg>문<span class="v">모두 잠금</span></div>
+        <div class="li"><svg class="ic" viewBox="0 0 24 24"><use href="#i-wind"/></svg>창문<span class="v">10% 열기</span></div>
+        <div class="li"><svg class="ic" viewBox="0 0 24 24"><use href="#i-moon"/></svg>조명<span class="v">끄기</span></div>
+        <div class="li"><svg class="ic" viewBox="0 0 24 24"><use href="#i-therm"/></svg>공조<span class="v">22℃ · 바깥 공기</span></div>
+      </div>
+    </div>
+    <div class="foot"><div class="row2"><div class="btn s" style="flex:.55">괜찮아요</div><div class="btn p">20분 잘게요</div></div></div>
+  </div></div>
+</div>
+
+<!-- 4. 쪽잠 중 (어둡게) -->
+<div class="dark" data-frame data-id="car-nap" data-map data-park>
+  <div class="w1 nap"><div class="app">
+    <div class="hdr"><svg class="comma" viewBox="0 0 24 24"><use href="#cm" fill="var(--amber)"/></svg><span class="name" style="color:var(--t2)">쉼표</span><div class="meta"><span>실내<b style="color:var(--t2)">23.1℃</b></span></div></div>
+    <div class="main" style="justify-content:center">
+      <div class="gauge">
+        <svg viewBox="0 0 600 600"><circle cx="300" cy="300" r="276" fill="none" stroke="var(--track)" stroke-width="10"/>
+          <circle cx="300" cy="300" r="276" fill="none" stroke="var(--amber)" stroke-width="10" stroke-linecap="round" stroke-dasharray="1734" stroke-dashoffset="1560" transform="rotate(-90 300 300)" opacity=".9"/></svg>
+        <div class="c"><div class="lab" style="color:var(--t3)">쪽잠 중</div><div class="fig" style="font-weight:400;color:var(--t1)">17:42</div><div class="sub" style="color:var(--t3)">14:52에 깨워 드려요</div></div>
+      </div>
+      <div class="chips">
+        <div class="chip"><svg class="ic" viewBox="0 0 24 24"><use href="#i-lock"/></svg>잠김</div>
+        <div class="chip"><svg class="ic" viewBox="0 0 24 24"><use href="#i-wind"/></svg>창문 10%</div>
+        <div class="chip"><svg class="ic" viewBox="0 0 24 24"><use href="#i-moon"/></svg>조명 꺼짐</div>
+        <div class="chip"><svg class="ic" viewBox="0 0 24 24"><use href="#i-therm"/></svg>22℃</div>
+      </div>
+      <div class="hint">화면을 누르면 잠깐 밝아져요</div>
+    </div>
+    <div class="foot"><div class="row2"><div class="btn s" style="color:var(--t1)">5분 더</div><div class="btn s" style="color:var(--t1)">지금 깨워 줘</div></div></div>
+  </div></div>
+</div>
+
+<!-- 5. 휴게소 제안 (낮) -->
+<div class="light" data-frame data-id="car-suggest-day" data-map>
+  <div class="w1"><div class="app">
+    <div class="hdr"><svg class="comma" viewBox="0 0 24 24"><use href="#cm" fill="var(--amber)"/></svg><span class="name">쉼표</span><div class="meta"><span>실내<b>24.0℃</b></span></div></div>
+    <div class="main">
+      <div class="eyebrow">2시간 운전했어요</div>
+      <div class="h">안성휴게소에서<br>20분 쉬어 갈까요</div>
+      <div class="route">
+        <div class="strip"><svg viewBox="0 0 24 24"><use href="#cm" fill="var(--amber)"/></svg><div class="ln"></div><div class="me"></div></div>
+        <div class="info">
+          <div><div class="k">쉴 곳</div><div class="v">안성휴게소</div><div class="v2">경부고속도로 · 6km 앞</div></div>
+          <div><div class="k">지금</div><div class="v2" style="color:var(--t1)">92km/h로 가는 중</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      <div class="say"><span class="dot"></span><svg class="ic t2" viewBox="0 0 24 24" style="width:28px;height:28px"><use href="#i-mic"/></svg>“응” 또는 “괜찮아”라고 말해도 돼요</div>
+      <div class="btn p">쉬어 갈게요</div><div class="btn s">괜찮아요</div>
+    </div>
+  </div></div>
+</div>
+
+<!-- 6. 기록 (낮) -->
+<div class="light" data-frame data-id="car-records-day" data-map data-park>
+  <div class="w1"><div class="app">
+    <div class="hdr"><svg class="comma" viewBox="0 0 24 24"><use href="#cm" fill="var(--amber)"/></svg><span class="name">쉼표</span><div class="meta"><span>실내<b>24.0℃</b></span></div></div>
+    <div class="tabs"><div>쪽잠</div><div class="on">기록</div><div>점검</div></div>
+    <div class="main">
+      <div class="stats">
+        <div class="stat"><div class="k">다음 휴식 제안</div><div class="n" style="color:var(--amberText)">1시간 30분 뒤</div></div>
+        <div class="stat"><div class="k">최근 7일</div><div class="n">3번 쉼</div></div>
+        <div class="stat"><div class="k">쉬기 전 운전 (중앙값)</div><div class="n">1시간 34분</div></div>
+      </div>
+      <div style="margin-top:32px">
+        <div class="rec"><span class="w">11월 12일 14:52</span>운전 1시간 52분 뒤<span class="l">20분</span></div>
+        <div class="rec"><span class="w">11월 10일 22:15</span>운전 1시간 28분 뒤<span class="l">25분</span></div>
+        <div class="rec"><span class="w">11월 8일 09:40</span>운전 1시간 34분 뒤<span class="l">10분</span></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<script>
+  const tpl = document.getElementById('frame').content;
+  const map = document.getElementById('mapwin').content;
+  document.querySelectorAll('[data-frame]').forEach(holder => {
+    const f = tpl.cloneNode(true);
+    const scr = f.querySelector('.screen');
+    scr.id = holder.dataset.id;
+    if (holder.hasAttribute('data-park')) {
+      scr.querySelector('.spd').textContent = '0';
+      scr.querySelectorAll('.prnd span').forEach(s => s.classList.toggle('on', s.textContent === 'P'));
+    }
+    const slot = scr.querySelector('.slot');
+    [...holder.children].forEach(c => slot.appendChild(c));
+    if (holder.hasAttribute('data-map')) slot.appendChild(map.cloneNode(true));
+    holder.appendChild(f);
+  });
+</script>
+</body></html>
