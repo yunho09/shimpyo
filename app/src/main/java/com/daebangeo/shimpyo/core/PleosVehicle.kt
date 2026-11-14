@@ -76,9 +76,15 @@ class PleosVehicle(
     val setup: StateFlow<Map<SetupItem, ItemStatus>> = _setup.asStateFlow()
 
     private val driverSeat get() = SeatArea(SeatValue.ROW_1_LEFT)
-    private val doorAreas = listOf(
-        DoorValue.ROW_1_LEFT, DoorValue.ROW_1_RIGHT, DoorValue.ROW_2_LEFT, DoorValue.ROW_2_RIGHT,
-    ).map { DoorArea(it) }
+    /**
+     * 문 잠금은 차마다 묶는 방식이 다르다. Pleos 에뮬레이터는 4개 문을 한 영역(0x55)으로만 잠근다
+     * (문마다 따로 하면 "area ID: 0x1 not supported"). 그래서 checkDoorLockCapabilities로 받은 영역을 쓰고,
+     * 못 받으면 4개 문 묶음 하나로 시도한다.
+     */
+    private val allDoors = DoorArea(DoorValue.ROW_1_LEFT, DoorValue.ROW_1_RIGHT, DoorValue.ROW_2_LEFT, DoorValue.ROW_2_RIGHT)
+    private var lockAreas: List<DoorArea>? = null
+    private var powerArea: SeatArea? = null
+    private var recircArea: SeatArea? = null
 
     private val tempListener = object : HvacTemperatureListener {
         override fun onHvacTemperatureUpdated(temperature: Float?) {
@@ -156,33 +162,65 @@ class PleosVehicle(
 
     fun lockDoors(lock: Boolean) {
         val d = door ?: return notReady("Door.setDoorLock", SetupItem.LOCK)
-        var remaining = doorAreas.size
-        var anyFail: String? = null
-        doorAreas.forEach { area ->
-            log.guard("Door.setDoorLock") {
-                d.setDoorLock(
-                    area, lock,
-                    onComplete = { a, v ->
-                        log.ok("Door.setDoorLock", "$a → $v")
-                        remaining--
-                        if (remaining == 0 && lock) mark(SetupItem.LOCK, anyFail?.let { ItemStatus.Failed(it) } ?: ItemStatus.Done)
-                    },
-                    onFailed = { e ->
-                        log.fail("Door.setDoorLock($area)", e)
-                        anyFail = e.message ?: "실패"
-                        remaining--
-                        if (remaining == 0 && lock) mark(SetupItem.LOCK, ItemStatus.Failed(anyFail ?: "실패"))
-                    },
-                )
+        withLockAreas { areas ->
+            var remaining = areas.size
+            var anyFail: String? = null
+            areas.forEach { area ->
+                log.guard("Door.setDoorLock") {
+                    d.setDoorLock(
+                        area, lock,
+                        onComplete = { a, v ->
+                            log.ok("Door.setDoorLock", "${a.name()} → $v")
+                            remaining--
+                            if (lock && remaining == 0) mark(SetupItem.LOCK, anyFail?.let { ItemStatus.Failed(it) } ?: ItemStatus.Done)
+                            if (remaining == 0) readDoorLock()
+                        },
+                        onFailed = { e ->
+                            log.fail("Door.setDoorLock(${area.name()})", e)
+                            anyFail = e.message ?: "실패"
+                            remaining--
+                            if (lock && remaining == 0) mark(SetupItem.LOCK, ItemStatus.Failed(anyFail ?: "실패"))
+                        },
+                    )
+                }
             }
         }
     }
 
+    private fun withLockAreas(block: (List<DoorArea>) -> Unit) {
+        lockAreas?.let { return block(it) }
+        val d = door ?: return
+        log.guard("Door.checkDoorLockCapabilities") {
+            d.checkDoorLockCapabilities(
+                onComplete = { _, areas ->
+                    // 후드·트렁크 같은 영역은 빼고 실내 문만
+                    val cabin = areas.filter { a -> a.values.none { it == DoorValue.HOOD || it == DoorValue.REAR } }
+                        .ifEmpty { listOf(allDoors) }
+                    lockAreas = cabin
+                    log.ok("Door.checkDoorLockCapabilities", cabin.joinToString { it.name() })
+                    block(cabin)
+                },
+                onFailed = { e ->
+                    log.fail("Door.checkDoorLockCapabilities", e)
+                    block(listOf(allDoors))
+                },
+            )
+        }
+    }
+
+    private fun DoorArea.name() = values.joinToString("+")
+
     fun readDoorLock() {
         val d = door ?: return
+        withLockAreas { areas ->
+            readDoorLock(d, areas.first())
+        }
+    }
+
+    private fun readDoorLock(d: Door, area: DoorArea) {
         log.guard("Door.getDoorLockState") {
             d.getDoorLockState(
-                doorAreas.first(),
+                area,
                 onComplete = { v -> _doorLocked.value = v; log.ok("Door.getDoorLockState", "$v") },
                 onFailed = { e -> log.fail("Door.getDoorLockState", e) },
             )
@@ -316,31 +354,60 @@ class PleosVehicle(
 
     private fun sleepClimate(tempC: Float) {
         val h = hvac ?: return notReady("HVAC.setHvacPower", SetupItem.CLIMATE)
-        log.guard("HVAC.setHvacPower") {
-            h.setHvacPower(
-                driverSeat, true,
-                onComplete = { _, v -> log.ok("HVAC.setHvacPower", "$v") },
-                onFailed = { e -> log.fail("HVAC.setHvacPower", e) },
-            )
-        }
+        setHvacPower(true)
         // 쪽잠 중 이산화탄소가 쌓이지 않도록 외기 유입(내기 순환 끔)
-        log.guard("HVAC.setHvacRecirculation") {
-            h.setHvacRecirculation(
-                driverSeat, false,
-                onComplete = { _, v -> log.ok("HVAC.setHvacRecirculation", "$v") },
-                onFailed = { e -> log.fail("HVAC.setHvacRecirculation", e) },
-            )
+        withHvacArea("HVAC.checkHvacRecirculationCapabilities", { recircArea }, { recircArea = it },
+            { ok, fail -> h.checkHvacRecirculationCapabilities(onComplete = { _, a -> ok(a) }, onFailed = fail) }) { area ->
+            log.guard("HVAC.setHvacRecirculation") {
+                h.setHvacRecirculation(
+                    area, false,
+                    onComplete = { _, v -> log.ok("HVAC.setHvacRecirculation", "$v") },
+                    onFailed = { e -> log.fail("HVAC.setHvacRecirculation", e) },
+                )
+            }
         }
         setTemperature(tempC, markClimate = true)
     }
 
     fun setHvacPower(on: Boolean) {
         val h = hvac ?: return
-        log.guard("HVAC.setHvacPower") {
-            h.setHvacPower(
-                driverSeat, on,
-                onComplete = { _, v -> log.ok("HVAC.setHvacPower", "$v") },
-                onFailed = { e -> log.fail("HVAC.setHvacPower", e) },
+        withHvacArea("HVAC.checkHvacPowerCapabilities", { powerArea }, { powerArea = it },
+            { ok, fail -> h.checkHvacPowerCapabilities(onComplete = { _, a -> ok(a) }, onFailed = fail) }) { area ->
+            log.guard("HVAC.setHvacPower") {
+                h.setHvacPower(
+                    area, on,
+                    onComplete = { _, v -> log.ok("HVAC.setHvacPower", "$v") },
+                    onFailed = { e -> log.fail("HVAC.setHvacPower", e) },
+                )
+            }
+        }
+    }
+
+    /**
+     * 공조 전원·내기 순환은 차마다 영역이 다르다. Pleos 에뮬레이터는 좌석 5개 묶음(0x75)만 받는다
+     * (운전석 0x1로 부르면 "area ID: 0x1 not supported for HVAC_POWER_ON").
+     * capability로 받은 첫 영역을 쓰고, 못 받으면 운전석으로 시도한다.
+     */
+    private fun withHvacArea(
+        api: String,
+        cached: () -> SeatArea?,
+        save: (SeatArea) -> Unit,
+        check: (ok: (List<SeatArea>) -> Unit, fail: (Exception) -> Unit) -> Unit,
+        block: (SeatArea) -> Unit,
+    ) {
+        cached()?.let { return block(it) }
+        log.guard(api) {
+            check(
+                { areas ->
+                    val area = areas.firstOrNull() ?: driverSeat
+                    save(area)
+                    log.ok(api, area.values.joinToString("+"))
+                    block(area)
+                },
+                { e ->
+                    log.fail(api, e)
+                    block(driverSeat)
+                },
             )
         }
     }

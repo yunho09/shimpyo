@@ -102,7 +102,9 @@ class NaviGateway(context: Context, private val log: ApiLog) {
      */
     fun goVia(area: RestArea) {
         if (!connected) return log.failMsg("NaviHelper.addWaypoint", "아직 연결 안 됨")
-        if (_destination.value != null) {
+        // 목적지가 없어도 DestinationInfo는 빈 값(이름 "", 남은 거리 0)으로 온다 → 그때는 경로 요청
+        val dest = _destination.value
+        if (dest != null && (dest.remainDistance > 0 || dest.name.isNotBlank())) {
             log.guard("NaviHelper.addWaypoint") {
                 navi.addWaypoint(
                     RequestWaypointInfo(

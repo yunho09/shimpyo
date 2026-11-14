@@ -64,6 +64,9 @@
 3. 이 폴더를 Android Studio에서 **Open** → Gradle Sync
    - SDK는 `https://nexus-playground.pleos.ai/repository/maven-releases/`에서 받는다 (settings.gradle.kts에 등록됨)
 
+**확인한 실행 환경** (2026-11-15): Pleos Connect v2.1.0 에뮬레이터 (Android 14 / API 34, x86_64, 화면 2560×1440 · 160dpi, 기기 프로필 `Pleos_Connect_v2_0`, RAM 4GB), JDK 17, Linux.
+Android Studio 없이 명령줄로도 된다: SDK 명령줄 도구로 `platform-tools`·`emulator`·`platforms;android-35`를 받고, Pleos 이미지(`crp-sys-img.xml`에 적힌 zip)를 `system-images/android-34/pleos_car_emulator/x86_64`에 풀어서 `avdmanager create avd -d Pleos_Connect_v2_0`.
+
 버전 기준선 (Pleos Vehicle SDK 샘플 앱과 동일):
 
 | 항목 | 버전 |
@@ -112,23 +115,23 @@ adb forward tcp:8088 tcp:8088   # Virtual Console 연결
 ## 5. 에뮬레이터에서 먼저 확인할 것 (점검 탭)
 
 정차 상태에서 **점검** 탭 → 버튼 누르고 오른쪽 로그에서 ✅/❌ 확인.
-결과는 이 표에 채워서 팀에 공유.
+결과는 이 표에 채워서 팀에 공유. **2026-11-15 Pleos Connect v2.1.0 에뮬레이터(API 34, 2560×1440)에서 확인한 결과.**
 
 | 확인할 것 | 버튼 | 성공 기준 | 결과 |
 |---|---|---|---|
-| Vehicle SDK 초기화 | (앱 켜면 자동) | `Vehicle.initialize` ✅ | |
-| 기어 구독 | Virtual Console에서 기어 변경 | 주행 화면(쉼 게이지) ↔ 정차 화면으로 바뀜 | |
-| 주행 제한 | Virtual Console에서 속도 올리기 | `CarUxRestrictionsManager.registerListener` ✅, 주행 화면으로 바뀜 | |
-| 문 잠금 | 문 → 잠금 | `Door.setDoorLock` ✅ ×4 + Virtual Console에서 잠김 | |
-| 창문 범위 | 창문 → 틈 열기 | `checkWindowPositionCapabilities` 범위 표시 (예: `0..100`) | |
-| 실내등 | 조명 → 어둡게 / 실내등 켜기 | `Light.setCabinLightSwitch` ✅ | |
-| 무드등 범위 | 조명 → 서서히 밝게 | 범위 표시 + 13단계 ✅ | |
-| 공조 | 공조 → 켜기, 22℃ | Virtual Console Climate에서 22℃ | |
-| 실내 온도 | 공조 → 실내 온도 | `getHvacTemperatureCurrent` 값 (Virtual Console 값과 같은지) | |
-| 현재 위치 | 내비 · 음성 → 현재 위치 | `Navi.onCurrentLocationInfo` 위도·경도 | |
-| 남은 시간 단위 | 목적지 설정 후 내비 · 음성 → 남은 시간 | `remainTime` 값이 **초인지 분인지** | |
-| TTS | 내비 · 음성 → 말하기 | 소리 남 (`TTS.initialize` ON_DEVICE ✅) | |
-| STT | 내비 · 음성 → 듣기 후 "응" | `STT.onUpdated(final)` 응 | |
+| Vehicle SDK 초기화 | (앱 켜면 자동) | `Vehicle.initialize` ✅ | ✅ |
+| 기어 구독 | Virtual Console에서 기어 변경 | 주행 화면(쉼 게이지) ↔ 정차 화면으로 바뀜 | ✅ P↔D 바로 바뀜 |
+| 주행 제한 | Virtual Console에서 속도 올리기 | `CarUxRestrictionsManager.registerListener` ✅, 주행 화면으로 바뀜 | 구독 ✅ (정차 중 `제한=false`). 속도를 올려 보는 시험은 아직 |
+| 문 잠금 | 문 → 잠금 | `Door.setDoorLock` ✅ ×4 + Virtual Console에서 잠김 | ✅ 4개 문 **묶음 한 번**(영역 0x55). 문마다 따로는 지원 안 함 → `checkDoorLockCapabilities`로 영역을 받아 쓰게 고침. Virtual Console Door Lock = On |
+| 창문 범위 | 창문 → 틈 열기 | `checkWindowPositionCapabilities` 범위 표시 (예: `0..100`) | ✅ 창문 4개 모두 `0..10` → 1로 설정 = Virtual Console 10%, D에서 0% |
+| 실내등 | 조명 → 어둡게 / 실내등 켜기 | `Light.setCabinLightSwitch` ✅ | ✅ OFF/ON |
+| 무드등 범위 | 조명 → 서서히 밝게 | 범위 표시 + 13단계 ✅ | ✅ `0..100`, 0→100 13단계 |
+| 공조 | 공조 → 켜기, 22℃ | Virtual Console Climate에서 22℃ | ✅ 전원·내기 순환은 좌석 5개 **묶음 영역(0x75)**만 지원 → `checkHvacPower/RecirculationCapabilities`로 받게 고침. 온도는 운전석 영역으로 22℃ ✅ |
+| 실내 온도 | 공조 → 실내 온도 | `getHvacTemperatureCurrent` 값 (Virtual Console 값과 같은지) | ✅ 19.1℃ (에뮬레이터 고정값) |
+| 현재 위치 | 내비 · 음성 → 현재 위치 | `Navi.onCurrentLocationInfo` 위도·경도 | ✅ 37.4127, 127.0947 (성남 수정구). 정차 중이라 heading=0.0만 확인 |
+| 남은 시간 단위 | 목적지 설정 후 내비 · 음성 → 남은 시간 | `remainTime` 값이 **초인지 분인지** | ✅ **초**: 내비 화면 15분 ↔ `remainTime=900` |
+| TTS | 내비 · 음성 → 말하기 | 소리 남 (`TTS.initialize` ON_DEVICE ✅) | ✅ 초기화·`speak` 에러 없음. 실제 소리는 사람이 들어 봐야 함 |
+| STT | 내비 · 음성 → 듣기 후 "응" | `STT.onUpdated(final)` 응 | 초기화 ✅, 녹음+온디바이스 인식 시작 ✅. 말소리 인식은 마이크 입력이 필요해 아직 (에뮬레이터를 `-allow-host-audio`로 켜고 시험) |
 
 > 공모전 공지: 콘솔에 "준비 중"으로 떠도 개발 문서에 나온 방법으로 에뮬레이터에서 개발·시험 가능.
 > 사무국은 특정 API 동작 문의에는 답하지 않으니 이 표로 직접 확인.
@@ -141,6 +144,12 @@ adb forward tcp:8088 tcp:8088   # Virtual Console 연결
 
 첫 빌드에서 난 에러와 고친 것 (Pleos AAR 실제 클래스를 `javap`로 확인):
 - `HvacTemperatureListener`, `DoorPositionListener`는 `VehicleListener`를 상속해서 **`onFailed(Exception)`도 구현해야 한다** → 두 리스너에 추가 (`core/PleosVehicle.kt`)
+
+에뮬레이터(Pleos Connect v2.1.0)에서 돌려 보고 고친 것:
+- **문 잠금**: 문마다 따로 잠그면 `area ID: 0x1 not supported for DOOR_LOCK`. 에뮬레이터는 4개 문 묶음 영역(0x55)만 받음 → `checkDoorLockCapabilities`로 지원 영역을 받아 잠그고, 못 받으면 4개 문 묶음으로 시도
+- **공조 전원·내기 순환**: 운전석(0x1)으로 부르면 `not supported for HVAC_POWER_ON`. 좌석 5개 묶음(0x75)만 받음 → `checkHvacPowerCapabilities` / `checkHvacRecirculationCapabilities`로 영역을 받음 (온도 설정·실내 온도는 운전석 그대로 됨)
+- **경유지**: 목적지가 없어도 `DestinationInfo`가 빈 값(이름 "", 남은 거리 0)으로 와서 `addWaypoint`를 불렀음 → 남은 거리나 이름이 있을 때만 경유지, 아니면 `requestRoute`로 휴게소를 목적지로 (`core/NaviGateway.kt`)
+- **화면**: 점검 탭에 둔 채 출발하면 다시 섰을 때도 점검 탭이 보였음 → 출발하면 쪽잠 탭으로 되돌림 (`ui/Screens.kt`)
 
 처음에는 Pleos 개발 문서 화면만 보고 시그니처를 맞췄다 (클라우드 환경이라 Maven 접근 불가).
 
@@ -161,7 +170,7 @@ adb forward tcp:8088 tcp:8088   # Virtual Console 연결
 - `DestinationInfo.remainTime`은 `Int` ✅, `CurrentLocationInfo.heading`은 `Double` ✅
 
 **아직 짐작인** 것 (에뮬레이터에서 확인할 것):
-- `DestinationInfo.remainTime` 단위 = 초
+- ~~`DestinationInfo.remainTime` 단위 = 초~~ → 에뮬레이터에서 **초로 확인** (5번 표)
 - `CurrentLocationInfo.heading` = 진행 방향(북 0°, 시계 방향). 0.0은 "방향 모름"으로 처리
 
 ### Claude Code로 고칠 때 프롬프트

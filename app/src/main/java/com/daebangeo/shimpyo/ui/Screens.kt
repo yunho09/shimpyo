@@ -103,6 +103,8 @@ fun ShimpyoRoot(vm: ShimpyoViewModel) {
     val moving = snap.gear == Gear.DRIVE || snap.gear == Gear.REVERSE || snap.gear == Gear.NEUTRAL || restricted
     val night = snap.phase == Phase.NAPPING || snap.phase == Phase.WAKING
     var tab by remember { mutableIntStateOf(0) }
+    // 점검·기록 탭에 둔 채 출발해도, 다시 서면 쪽잠 화면(쪽잠 제안)이 보이게
+    LaunchedEffect(moving) { if (moving) tab = 0 }
 
     val screen = when {
         night -> if (snap.phase == Phase.NAPPING) Screen.NAPPING else Screen.WAKING
