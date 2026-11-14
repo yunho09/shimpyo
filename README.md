@@ -149,6 +149,7 @@ adb forward tcp:8088 tcp:8088   # Virtual Console 연결
 - **문 잠금**: 문마다 따로 잠그면 `area ID: 0x1 not supported for DOOR_LOCK`. 에뮬레이터는 4개 문 묶음 영역(0x55)만 받음 → `checkDoorLockCapabilities`로 지원 영역을 받아 잠그고, 못 받으면 4개 문 묶음으로 시도
 - **공조 전원·내기 순환**: 운전석(0x1)으로 부르면 `not supported for HVAC_POWER_ON`. 좌석 5개 묶음(0x75)만 받음 → `checkHvacPowerCapabilities` / `checkHvacRecirculationCapabilities`로 영역을 받음 (온도 설정·실내 온도는 운전석 그대로 됨)
 - **경유지**: 목적지가 없어도 `DestinationInfo`가 빈 값(이름 "", 남은 거리 0)으로 와서 `addWaypoint`를 불렀음 → 남은 거리나 이름이 있을 때만 경유지, 아니면 `requestRoute`로 휴게소를 목적지로 (`core/NaviGateway.kt`)
+- **출발 브리핑 목적지**: 에뮬레이터는 차가 실제로 움직이지 않아서 쉬고 나서도 내비가 휴게소(경유지)를 "다음 목적지"로 알려 줌 → "휴게소까지 ○○:○○ 도착"이 나왔음. 쉬었던 휴게소가 아직 다음 목적지면 그 경유지를 `removeWaypoint`로 정리하고 최종 목적지로 안내 (실차에서는 도착하면 내비가 알아서 지우므로 이름이 같을 때만 동작)
 - **화면**: 점검 탭에 둔 채 출발하면 다시 섰을 때도 점검 탭이 보였음 → 출발하면 쪽잠 탭으로 되돌림 (`ui/Screens.kt`)
 
 처음에는 Pleos 개발 문서 화면만 보고 시그니처를 맞췄다 (클라우드 환경이라 Maven 접근 불가).
@@ -226,11 +227,12 @@ design/                  # HTML 시안, 전후 비교 이미지
 - 앱이 화면에 떠 있을 때만 동작 (백그라운드 서비스는 다음 단계)
 - 차크닉 모드, 풀 차박은 로드맵
 
-## 9. 제출용 APK
+## 9. 제출용 APK · 시연 영상
 
-공모전 규칙: 저장소 `apk/` 폴더에 `팀명_앱이름_release.apk`
-
-```bash
-./gradlew assembleRelease   # 서명 설정 필요. 급하면 assembleDebug 결과를 이름만 바꿔서
-mkdir -p apk && cp app/build/outputs/apk/release/app-release.apk apk/대방어_쉼표_release.apk
-```
+- **APK**: `apk/대방어_쉼표_release.apk` (v0.3.2, release 빌드, 팀 자체 키로 서명, 43MB)
+  - 에뮬레이터에 바로 설치: `adb install -g apk/대방어_쉼표_release.apk`
+  - 서명 키는 저장소에 없다. 다시 서명하려면 `local.properties`에 `shimpyo.signing=/경로/서명.properties`(storeFile·storePassword·keyAlias·keyPassword)를 넣고 `./gradlew assembleRelease`. 이 줄이 없으면 서명 안 된 release가 나온다
+- **시연 영상**: `design/demo/쉼표_시연영상_에뮬레이터.mp4` (1분 50초, 1920×1080, 소리 없음 — 음성 안내는 앱 자막 바에 나옴)
+  - 자막 `design/demo/쉼표_시연영상_자막.srt`, 내레이션 대본 `design/demo/쉼표_시연영상_대본.md`
+  - 찍은 순서: README 4번과 같음. 목적지는 부산역 KTX로 잡아 두고 [지금 쉴 곳 찾기]로 바로 제안
+- **에뮬레이터 켜기**: `scripts/start-pleos-emulator.sh` (부팅 후 서울 시간대·Virtual Console 포트 연결. 소리가 지직거리면 `PULSE_LATENCY_MSEC`를 늘리고, 다른 무거운 프로그램을 끄면 나아짐)

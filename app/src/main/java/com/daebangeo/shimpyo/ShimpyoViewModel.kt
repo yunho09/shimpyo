@@ -181,7 +181,7 @@ class ShimpyoViewModel(app: Application) : AndroidViewModel(app) {
             is NapEffect.AdjustClimate -> vehicle.setTemperature(effect.targetC)
 
             NapEffect.RequestEta -> viewModelScope.launch {
-                val d = navi.freshDestination(2_500)
+                val d = navi.destinationAfterRest(2_500)
                 dispatch(NapEvent.EtaArrived(d?.remainTime, d?.name, now()))
             }
 

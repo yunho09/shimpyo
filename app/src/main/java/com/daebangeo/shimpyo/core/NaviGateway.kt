@@ -11,6 +11,7 @@ import ai.pleos.playground.navi.helper.NaviHelper
 import ai.pleos.playground.navi.helper.listener.NaviHelperEventListener
 import android.content.Context
 import com.daebangeo.shimpyo.domain.RestArea
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +35,10 @@ class NaviGateway(context: Context, private val log: ApiLog) {
     private val _destination = MutableStateFlow<DestinationInfo?>(null)
     val destination: StateFlow<DestinationInfo?> = _destination.asStateFlow()
 
+    /** 마지막으로 안내한 휴게소 이름과, 그게 경유지였는지(아니면 목적지) */
+    private var restName: String? = null
+    private var restIsWaypoint = false
+
     private val listener = object : NaviHelperEventListener {
         override fun onCurrentLocationInfo(currentLocationInfo: CurrentLocationInfo) {
             _location.value = currentLocationInfo
@@ -47,6 +52,8 @@ class NaviGateway(context: Context, private val log: ApiLog) {
 
         override fun onWayPointArrived(waypointArrivedInfo: WaypointArrivedInfo) {
             log.ok("Navi.onWayPointArrived", "$waypointArrivedInfo")
+            // 실차: 경유지에 도착하면 내비가 경유지를 지나간 것으로 처리한다
+            if (restIsWaypoint) restIsWaypoint = false
         }
 
         override fun onError(errorCode: NaviErrorCode) {
@@ -97,6 +104,26 @@ class NaviGateway(context: Context, private val log: ApiLog) {
     }
 
     /**
+     * 쪽잠 뒤 출발 브리핑용 최종 목적지.
+     * 내비가 아직 쉬었던 휴게소를 "다음 목적지"로 알려 주면(에뮬레이터처럼 차가 실제로 경유지에 도착하지 않은 경우):
+     * - 휴게소가 경유지였으면 그 경유지를 지우고 다시 받아 최종 목적지(예: 부산역)를 쓴다
+     * - 휴게소가 목적지였으면 남은 목적지가 없으므로 null (→ "안전운전하세요")
+     */
+    suspend fun destinationAfterRest(timeoutMs: Long): DestinationInfo? {
+        val d = freshDestination(timeoutMs)
+        val rest = restName
+        if (d == null || rest == null || d.name != rest) return d
+        if (!restIsWaypoint) return null
+        log.guard("NaviHelper.removeWaypoint") {
+            navi.removeWaypoint(WaypointIndex.FIRST)
+            log.ok("NaviHelper.removeWaypoint", "$rest (쉬고 출발 → 지나간 경유지 정리)")
+        }
+        restIsWaypoint = false
+        delay(800) // 경로 다시 계산할 시간
+        return freshDestination(timeoutMs)?.takeIf { it.name != rest }
+    }
+
+    /**
      * 휴게소를 경유지로 넣는다.
      * 목적지가 없으면 경유지를 넣을 수 없으므로 휴게소를 목적지로 안내한다.
      */
@@ -118,6 +145,8 @@ class NaviGateway(context: Context, private val log: ApiLog) {
                     ),
                 )
                 log.ok("NaviHelper.addWaypoint", area.name)
+                restName = area.name
+                restIsWaypoint = true
             }
         } else {
             log.guard("NaviHelper.requestRoute") {
@@ -134,6 +163,8 @@ class NaviGateway(context: Context, private val log: ApiLog) {
                     ),
                 )
                 log.ok("NaviHelper.requestRoute", "${area.name} (목적지 없음 → 휴게소를 목적지로)")
+                restName = area.name
+                restIsWaypoint = false
             }
         }
     }
