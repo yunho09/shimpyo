@@ -137,8 +137,12 @@ adb forward tcp:8088 tcp:8088   # Virtual Console 연결
 
 ## 6. 빌드 에러가 나면
 
-SDK 시그니처는 Pleos 개발 문서 화면을 보고 맞췄다. 클라우드 환경에서 Pleos Maven 저장소에 접근이 안 돼서 **실제 빌드는 아직 못 돌렸다.**
-`domain/` 순수 로직은 테스트 22개 통과, SDK 연동 코드(core/, ViewModel)는 문서 시그니처로 만든 스텁에 대해 타입 검사까지 통과. Compose 화면(ui/)은 빌드 도구가 없어 검사 못 했다.
+**2026-11-15 실제 빌드 통과**: 리눅스 PC, JDK 17 + Gradle 8.10.2 + AGP 8.8.2로 `./gradlew assembleDebug` 성공, `./gradlew testDebugUnitTest` 22개 모두 통과. Compose 화면(ui/)도 그대로 컴파일됐다.
+
+첫 빌드에서 난 에러와 고친 것 (Pleos AAR 실제 클래스를 `javap`로 확인):
+- `HvacTemperatureListener`, `DoorPositionListener`는 `VehicleListener`를 상속해서 **`onFailed(Exception)`도 구현해야 한다** → 두 리스너에 추가 (`core/PleosVehicle.kt`)
+
+처음에는 Pleos 개발 문서 화면만 보고 시그니처를 맞췄다 (클라우드 환경이라 Maven 접근 불가).
 
 문서에서 **직접 확인한** 것:
 - Door `setDoorLock`, `getDoorLockState`, `registerDoorPosition(area, listener)`, `DoorPositionListener.onPositionUpdated(Int?)` / Window `setWindowPosition`, `checkWindowPositionCapabilities`
@@ -148,12 +152,15 @@ SDK 시그니처는 Pleos 개발 문서 화면을 보고 맞췄다. 클라우드
 - NaviHelper `initialize(onConnected, onFailed)`, `addListener`, `getCurrentLocationInfo`, `getDestinationInfo`, `addWaypoint`, `requestRoute`, `RequestWaypointInfo`, `RouteInfo`, `CurrentLocationInfo`, `DestinationInfo`
 - TTS·STT 초기화·리스너·speak/request 예제 코드
 
-**문서 패턴으로 짐작한** 것 (에러 나면 여기부터):
-- `DoorArea(DoorValue...)`, `SeatArea(SeatValue...)` 생성자 (WindowArea와 같은 vararg라고 가정)
-- TTS `EventListener` 패키지: `ai.pleos.playground.tts.listener.EventListener`
-- STT `ResultListener` 패키지: `ai.pleos.playground.stt.listener.ResultListener`
-- STT `setLocale(Locale)` 존재
-- `Door.unregisterDoorPosition(area, listener)` (register와 같은 모양이라고 가정)
+**문서 패턴으로 짐작했다가 빌드로 확인된** 것 (Vehicle 2.3.2 / NaviHelper 3.0.5 / TTS·STT 3.3.1 AAR 기준):
+- `DoorArea(DoorValue...)`, `SeatArea(SeatValue...)` 생성자 ✅
+- TTS `EventListener` 패키지 `ai.pleos.playground.tts.listener.EventListener` ✅
+- STT `ResultListener` 패키지 `ai.pleos.playground.stt.listener.ResultListener` ✅
+- STT `setLocale(java.util.Locale)` ✅
+- `Door.unregisterDoorPosition(DoorArea, DoorPositionListener)` ✅
+- `DestinationInfo.remainTime`은 `Int` ✅, `CurrentLocationInfo.heading`은 `Double` ✅
+
+**아직 짐작인** 것 (에뮬레이터에서 확인할 것):
 - `DestinationInfo.remainTime` 단위 = 초
 - `CurrentLocationInfo.heading` = 진행 방향(북 0°, 시계 방향). 0.0은 "방향 모름"으로 처리
 

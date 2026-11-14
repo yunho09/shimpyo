@@ -84,6 +84,8 @@ class PleosVehicle(
         override fun onHvacTemperatureUpdated(temperature: Float?) {
             _cabinTemp.value = temperature
         }
+        // Vehicle 2.3.2: 모든 리스너가 VehicleListener.onFailed(Exception)를 함께 구현해야 한다
+        override fun onFailed(e: Exception) = log.fail("HVAC.onHvacTemperatureUpdated", e)
     }
 
     private val _driverDoorOpened = MutableSharedFlow<Unit>(extraBufferCapacity = 4)
@@ -98,6 +100,7 @@ class PleosVehicle(
             lastDoorPos = pos
             if (pos != null && pos > 0 && (was == null || was == 0)) _driverDoorOpened.tryEmit(Unit)
         }
+        override fun onFailed(e: Exception) = log.fail("Door.onPositionUpdated", e)
     }
 
     private var rampJob: Job? = null
