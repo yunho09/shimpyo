@@ -232,7 +232,7 @@ design/                  # HTML 시안, 전후 비교 이미지
 - **APK**: `apk/대방어_쉼표_release.apk` (v0.3.2, release 빌드, 팀 자체 키로 서명, 43MB)
   - 에뮬레이터에 바로 설치: `adb install -g apk/대방어_쉼표_release.apk`
   - 서명 키는 저장소에 없다. 다시 서명하려면 `local.properties`에 `shimpyo.signing=/경로/서명.properties`(storeFile·storePassword·keyAlias·keyPassword)를 넣고 `./gradlew assembleRelease`. 이 줄이 없으면 서명 안 된 release가 나온다
-- **시연 영상**: `design/demo/쉼표_시연영상_에뮬레이터.mp4` (1분 50초, 1920×1240, 30fps, 소리 없음 — 화면 아래 띠에 설명 자막을 입혔고, 음성 안내 문장은 앱 자막 바에도 나옴)
+- **시연 영상**: `design/demo/쉼표_시연영상_에뮬레이터.mp4` (2분, 1920×1240, 30fps, 1.1배속, 소리 없음 — 화면 아래 띠에 설명 자막을 입혔고, 음성 안내 문장은 앱 자막 바에도 나옴)
   - 자막 `design/demo/쉼표_시연영상_자막.srt`, 내레이션 대본 `design/demo/쉼표_시연영상_대본.md`
   - 찍은 순서: README 4번과 같음. 목적지는 부산역 KTX로 잡아 두고 [지금 쉴 곳 찾기]로 바로 제안
 - **에뮬레이터 켜기**: `scripts/start-pleos-emulator.sh` (부팅 후 서울 시간대·Virtual Console 포트 연결. 소리가 지직거리면 `PULSE_LATENCY_MSEC`를 늘리고, 다른 무거운 프로그램을 끄면 나아짐)

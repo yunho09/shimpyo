@@ -11,7 +11,8 @@ SCALE=${PLEOS_WINDOW_SCALE:-0.55}
 if [ -f "$INI" ]; then
   if grep -q '^window.scale' "$INI"; then sed -i "s/^window.scale.*/window.scale = $SCALE/" "$INI"; else echo "window.scale = $SCALE" >> "$INI"; fi
 fi
-$ANDROID_HOME/emulator/emulator -avd Pleos_Connect_v2.1 -no-boot-anim "$@" &
+# 스냅샷에서 빠르게 켜면 호스트 GPU(gfxstream) 오류로 에뮬레이터가 죽어서 항상 콜드 부팅
+$ANDROID_HOME/emulator/emulator -avd Pleos_Connect_v2.1 -no-boot-anim -no-snapshot-load "$@" &
 $A wait-for-device
 until [ "$($A shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do sleep 2; done
 $A shell settings put global auto_time_zone 0
