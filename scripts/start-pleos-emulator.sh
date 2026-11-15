@@ -5,6 +5,12 @@
 export ANDROID_HOME=${ANDROID_HOME:-$HOME/Android/Sdk}; export ANDROID_SDK_ROOT=$ANDROID_HOME
 export PULSE_LATENCY_MSEC=${PULSE_LATENCY_MSEC:-120}
 A=$ANDROID_HOME/platform-tools/adb
+# 창 배율: HiDPI 화면에서 2560×1440 창이 화면 밖으로 넘치지 않게 (0.55 ≈ 1400×800)
+INI=$HOME/.android/avd/Pleos_Connect_v2.1.avd/emulator-user.ini
+SCALE=${PLEOS_WINDOW_SCALE:-0.55}
+if [ -f "$INI" ]; then
+  if grep -q '^window.scale' "$INI"; then sed -i "s/^window.scale.*/window.scale = $SCALE/" "$INI"; else echo "window.scale = $SCALE" >> "$INI"; fi
+fi
 $ANDROID_HOME/emulator/emulator -avd Pleos_Connect_v2.1 -no-boot-anim "$@" &
 $A wait-for-device
 until [ "$($A shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do sleep 2; done
